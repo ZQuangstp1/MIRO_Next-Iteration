@@ -161,7 +161,7 @@ class ControllerWindow(QWidget):
         parent_layout.addWidget(footer_widget)
 
     def send_action(self, linear, angular): 
-        url = "https://next-iteration.onrender.com/robot/move"
+        url = "https://miro-next-iteration.onrender.com/robot/move"
         payload = {
             "token": "secure-session-token-001", 
             "linear": linear, 

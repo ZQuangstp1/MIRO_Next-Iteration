@@ -95,7 +95,7 @@ class LoginWindow(QWidget):
 
     def handle_login(self):
         # Ensure your Node.js server is running on port 3000
-        url = "https://next-iteration.onrender.com/login"
+        url = "https://miro-next-iteration.onrender.com/login"
         data = {"username": self.username.text(), "password": self.password.text()}
         
         try:
