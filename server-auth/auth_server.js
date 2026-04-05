@@ -6,7 +6,7 @@ const app = express();
 app.use(bodyParser.json());
 
 // Connect to the Python Bridge (running on port 5000)
-const pythonBridge = io("http://localhost:5000");
+const pythonBridge = io("https://noddingly-unloaned-van.ngrok-free.dev");
 
 // Mock Database for User Credentials
 const USERS = { "rigel": "password123" };
