@@ -3,7 +3,22 @@ import requests
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
-from PyQt5.QtSvg import QSvgWidget # Required for .svg files
+from PyQt5.QtSvg import QSvgWidget
+import pyrebase
+
+firebase_config = {
+    "apiKey": "AIzaSyD3vQ4VZpH1Qt5wMy6_Za_oM5OiUvG5DEk",
+    "authDomain": "robot-asssistant.firebaseapp.com",
+    "databaseURL": "https://robot-asssistant-default-rtdb.firebaseio.com",
+    "projectId": "robot-asssistant",
+    "storageBucket": "robot-asssistant.firebasestorage.app",
+    "messagingSenderId": "730368792661",
+    "appId": "1:730368792661:web:7fccc255c60c08acdd1cdc"
+}
+
+firebase = pyrebase.initialize_app(firebase_config)
+auth = firebase.auth()
+
 
 class LoginWindow(QWidget):
     def __init__(self, on_success):
@@ -11,7 +26,7 @@ class LoginWindow(QWidget):
         self.on_success = on_success 
         self.setWindowTitle("MiRo Login")
         self.setFixedSize(360, 640)
-        self.setStyleSheet("background-color: #F8FAFC;") # Light grey background
+        self.setStyleSheet("background-color: #F8FAFC;") 
         self.initUI()
 
     def initUI(self):
@@ -94,17 +109,55 @@ class LoginWindow(QWidget):
         layout.addStretch()
 
     def handle_login(self):
-        # Ensure your Node.js server is running on port 3000
-        url = "https://miro-next-iteration.onrender.com/login"
-        data = {"username": self.username.text(), "password": self.password.text()}
-        
+        email = self.username.text()
+        password = self.password.text()
+
+       
+        popup_style = """
+            QMessageBox {
+                background-color: white;
+                border: 2px solid #1A2B4C;
+                border-radius: 10px;
+            }
+            QLabel {
+                color: #1A2B4C;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            QPushButton {
+                background-color: #1A2B4C;
+                color: white;
+                border-radius: 8px;
+                padding: 8px 20px;
+                font-weight: bold;
+                min-width: 80px;
+            }
+            QPushButton:hover {
+                background-color: #2D3E61;
+            }
+        """
+
         try:
-            response = requests.post(url, json=data, timeout=2)
-            if response.status_code == 200:
-                print("Login successful!")
-                self.on_success() 
-                self.close()
-            else:
-                QMessageBox.warning(self, "Login Failed", "Invalid username or password.")
+            user = auth.sign_in_with_email_and_password(email, password)
+            
+            # --- SUCCESS POPUP ---
+            msg = QMessageBox(self)
+            msg.setWindowTitle("Success")
+            msg.setText("Login Successful!")
+            msg.setInformativeText(f"Welcome back, {email}")
+            msg.setIcon(QMessageBox.Information)
+            msg.setStyleSheet(popup_style) 
+            msg.exec_()
+            
+            self.on_success()
+            self.close()
+
         except Exception as e:
-            QMessageBox.critical(self, "Connection Error", "Could not connect to Auth Server.\nMake sure node auth_server.js is running.")
+            # --- ERROR POPUP ---
+            msg = QMessageBox(self)
+            msg.setWindowTitle("Login Failed")
+            msg.setText("Invalid Credentials")
+            msg.setInformativeText("Please check your email and password.")
+            msg.setIcon(QMessageBox.Critical)
+            msg.setStyleSheet(popup_style)
+            msg.exec_()
