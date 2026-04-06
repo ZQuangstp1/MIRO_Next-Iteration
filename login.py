@@ -34,7 +34,7 @@ class LoginWindow(QWidget):
         layout.setContentsMargins(40, 20, 40, 20)
         layout.setSpacing(15)
 
-        # 1. ADD LOGO (SVG) - Centered at the top
+        # 1. ADD LOGO (SVG)
         self.logo = QSvgWidget("icons/Logo.svg")
         self.logo.setFixedSize(120, 120)
         
@@ -157,7 +157,8 @@ class LoginWindow(QWidget):
 
         try:
             user = auth.sign_in_with_email_and_password(email, password)
-            
+            raw_name = email.split('@')[0]
+            display_name = raw_name.capitalize()
             # --- SUCCESS POPUP ---
             msg = QMessageBox(self)
             msg.setWindowTitle("Success")
@@ -167,7 +168,7 @@ class LoginWindow(QWidget):
             msg.setStyleSheet(popup_style) 
             msg.exec_()
             
-            self.on_success()
+            self.on_success(display_name)
             self.close()
 
         except Exception as e:

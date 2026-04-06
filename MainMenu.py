@@ -10,8 +10,9 @@ from login import LoginWindow
 from theme import *
 
 class App(QWidget):
-    def __init__(self):
+    def __init__(self, username="User"):
         super().__init__()
+        self.username = username
         self.settings_window = None
         self.setWindowTitle("Miro Smart Assistant")
         self.setGeometry(100, 100, 360, 640)
@@ -22,7 +23,7 @@ class App(QWidget):
         main = QVBoxLayout()
 
         # ===== HEADER =====
-        title = QLabel("Hey, Rigel!")
+        title = QLabel(f"Hey, {self.username}!")
         title.setStyleSheet(f"font-size: 22px; font-weight: bold; color: {FONT};")
 
         subtitle = QLabel("What we’re doing today?")
@@ -176,13 +177,18 @@ class App(QWidget):
             self.controller_window.show()
             self.hide()
 
+def start_app(display_name):
+    global main_menu
+    main_menu = App(username=display_name)
+    main_menu.show()
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     
-    main_menu = App() # Create the main menu but don't show() it yet
+    main_menu = App() 
 
     # Create login window and pass the main_menu.show function as the success callback
-    login_screen = LoginWindow(on_success=main_menu.show)
+    login_screen = LoginWindow(on_success=start_app)
     login_screen.show()
 
     sys.exit(app.exec_())
