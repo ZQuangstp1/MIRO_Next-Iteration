@@ -108,6 +108,24 @@ class LoginWindow(QWidget):
         layout.addWidget(btn_login, alignment=Qt.AlignCenter)
         layout.addStretch()
 
+        # GOOGLE LOGIN BUTTON
+        self.btn_google = QPushButton("Sign in with Google")
+        self.btn_google.setFixedSize(280, 50)
+        self.btn_google.setCursor(Qt.PointingHandCursor)
+        self.btn_google.setStyleSheet("""
+            QPushButton {
+                background-color: white; 
+                color: #1A2B4C; 
+                border: 2px solid #1A2B4C;
+                border-radius: 12px; 
+                font-weight: bold;
+                font-size: 14px;
+                margin-top: 5px;
+            }
+            QPushButton:hover { background-color: #F0F4F8; }
+        """)
+        self.btn_google.clicked.connect(self.handle_google_login)
+        layout.addWidget(self.btn_google, alignment=Qt.AlignCenter)
     def handle_login(self):
         email = self.username.text()
         password = self.password.text()
@@ -161,3 +179,42 @@ class LoginWindow(QWidget):
             msg.setIcon(QMessageBox.Critical)
             msg.setStyleSheet(popup_style)
             msg.exec_()
+
+    def handle_google_login(self):
+        import webbrowser
+
+        popup_style = """
+            QMessageBox {
+                background-color: white;
+                border: 2px solid #1A2B4C;
+                border-radius: 10px;
+            }
+            QLabel {
+                color: #1A2B4C;
+                font-size: 14px;
+                font-weight: bold;
+            }
+            QPushButton {
+                background-color: #1A2B4C;
+                color: white;
+                border-radius: 8px;
+                padding: 8px 20px;
+                font-weight: bold;
+                min-width: 80px;
+            }
+            QPushButton:hover {
+                background-color: #2D3E61;
+            }
+        """
+
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Google Login")
+        msg.setText("Redirecting to Browser...")
+        msg.setInformativeText("Please complete the sign-in in your web browser.")
+        msg.setStyleSheet(popup_style) 
+        msg.exec_()
+        
+        # Open the Firebase Auth URL
+        # Note: You would replace this with your actual Firebase Auth Domain link
+        webbrowser.open(f"https://{firebase_config['authDomain']}/__/auth/handler")
+     
