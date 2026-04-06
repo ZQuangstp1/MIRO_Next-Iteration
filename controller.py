@@ -1,5 +1,5 @@
 import sys
-import miro2 as miro # MiRo MDK Library
+import miro2 as miro 
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -7,27 +7,75 @@ from PyQt5.QtCore import *
 class ControllerWindow(QWidget):
     def __init__(self, parent=None):
         super().__init__()
-        self.parent = parent # Reference to Main Menu
-        self.setWindowTitle("Navigate Miro")
-        self.setFixedSize(360, 700) 
-        self.setStyleSheet("background-color: #F8FAFC;")
+        self.parent = parent
         
-        # 1. Initialize Robot Interface from MDK
-        # This connects directly to the local ROS nodes at UFV
+        # 1. Initialize Robot Interface
         try:
             self.interf = miro.lib.RobotInterface()
         except Exception as e:
-            print(f"Robot Interface not found: {e}")
+            print(f"Warning: Could not connect to Robot Interface: {e}")
             self.interf = None
+        
+        # Movement parameters
+        self.dtheta = 2.0  # Angular velocity (turning)
+        self.dy = 0.2      # Linear velocity (forward/backward)
+        self.timeout = 0.5 # Safety timeout for commands
 
-        # 2. Movement parameters derived from client_manual.py
-        self.dtheta = 2.0  # Rotation speed (angular)
-        self.dy = 0.2      # Forward/Backward speed (linear)
-        self.timeout = 0.5 # Safety timeout
+        # 2. Continuous movement logic using QTimer
+        self.move_timer = QTimer()
+        self.move_timer.timeout.connect(self.send_continuous_velocity)
+        self.current_v = 0.0  # Target linear velocity
+        self.current_w = 0.0  # Target angular velocity
 
+        # 3. Setup User Interface
         self.initUI()
 
+        # 4. Connect button events for press-and-hold functionality
+        self.btn_up.pressed.connect(lambda: self.start_moving(self.dy, 0.0))
+        self.btn_up.released.connect(self.stop_moving)
+        
+        self.btn_down.pressed.connect(lambda: self.start_moving(-self.dy, 0.0))
+        self.btn_down.released.connect(self.stop_moving)
+        
+        self.btn_left.pressed.connect(lambda: self.start_moving(0.0, self.dtheta))
+        self.btn_left.released.connect(self.stop_moving)
+        
+        self.btn_right.pressed.connect(lambda: self.start_moving(0.0, -self.dtheta))
+        self.btn_right.released.connect(self.stop_moving)
+
+        self.btn_stop.clicked.connect(self.stop_robot_emergency)
+
+    def start_moving(self, v, w):
+        """Sets the target velocities and starts the movement timer."""
+        self.current_v = v
+        self.current_w = w
+        if not self.move_timer.isActive():
+            self.move_timer.start(50) # Send command every 50ms for smooth motion
+
+    def stop_moving(self):
+        """Stops the timer and sends a zero-velocity command to the robot."""
+        self.move_timer.stop()
+        self.current_v = 0.0
+        self.current_w = 0.0
+        if self.interf:
+            self.interf.set_vel(0, 0)
+
+    def send_continuous_velocity(self):
+        """Repeatedly called by the timer to maintain robot movement."""
+        if self.interf:
+            self.interf.set_vel(self.current_v, self.current_w, self.timeout)
+
+    def stop_robot_emergency(self):
+        """Immediate emergency halt."""
+        self.stop_moving()
+        print("Emergency Stop Triggered")
+
     def initUI(self):
+        """Defines the layout and visual elements of the controller."""
+        self.setWindowTitle("Navigate Miro")
+        self.setFixedSize(360, 700)
+        self.setStyleSheet("background-color: #F8FAFC;")
+        
         window_layout = QVBoxLayout(self)
         window_layout.setContentsMargins(0, 0, 0, 0)
         window_layout.setSpacing(0)
@@ -61,103 +109,77 @@ class ControllerWindow(QWidget):
         central_container.setContentsMargins(20, 30, 20, 30)
         central_container.setSpacing(15) 
 
-        # UP Row
-        forward_layout = QHBoxLayout()
+        # Forward Direction (Up)
+        row_up = QHBoxLayout()
         self.btn_up = self.create_control_btn("↑")
-        self.btn_up.mousePressEvent = lambda e: self.move_robot("up")
-        forward_layout.addStretch()
-        forward_layout.addWidget(self.btn_up)
-        forward_layout.addStretch()
-        central_container.addLayout(forward_layout)
+        row_up.addStretch()
+        row_up.addWidget(self.btn_up)
+        row_up.addStretch()
+        central_container.addLayout(row_up)
 
-        # MIDDLE Row (Left - Stop - Right)
-        middle_layout = QHBoxLayout()
-        middle_layout.setSpacing(15) 
-        middle_layout.addStretch()
-
+        # Steering (Left - Stop - Right)
+        row_mid = QHBoxLayout()
         self.btn_left = self.create_control_btn("←")
-        self.btn_left.mousePressEvent = lambda e: self.move_robot("left")
-        
         self.btn_stop = self.create_stop_btn() 
-        self.btn_stop.mousePressEvent = lambda e: self.move_robot("stop")
-        
         self.btn_right = self.create_control_btn("→")
-        self.btn_right.mousePressEvent = lambda e: self.move_robot("right")
+        row_mid.addWidget(self.btn_left)
+        row_mid.addWidget(self.btn_stop)
+        row_mid.addWidget(self.btn_right)
+        central_container.addLayout(row_mid)
 
-        middle_layout.addWidget(self.btn_left)
-        middle_layout.addWidget(self.btn_stop)
-        middle_layout.addWidget(self.btn_right)
-        middle_layout.addStretch()
-        central_container.addLayout(middle_layout)
-
-        # DOWN Row
-        backward_layout = QHBoxLayout()
+        # Backward Direction (Down)
+        row_down = QHBoxLayout()
         self.btn_down = self.create_control_btn("↓")
-        self.btn_down.mousePressEvent = lambda e: self.move_robot("down")
-        backward_layout.addStretch()
-        backward_layout.addWidget(self.btn_down)
-        backward_layout.addStretch()
-        central_container.addLayout(backward_layout)
+        row_down.addStretch()
+        row_down.addWidget(self.btn_down)
+        row_down.addStretch()
+        central_container.addLayout(row_down)
 
         window_layout.addLayout(central_container)
         window_layout.addStretch(1) 
         self.add_footer(window_layout)
 
-    def move_robot(self, direction):
-        """Processes movement logic directly through the Robot Interface."""
-        linear = 0.0
-        angular = 0.0
-
-        if direction == "up":
-            linear = self.dy
-        elif direction == "down":
-            linear = -self.dy
-        elif direction == "left":
-            angular = self.dtheta
-        elif direction == "right":
-            angular = -self.dtheta
-        elif direction == "stop":
-            linear = 0.0
-            angular = 0.0
-
-        # Execute command locally
-        if self.interf:
-            self.interf.set_vel(linear, angular, self.timeout)
-            print(f"MDK Command: {direction} (Linear: {linear}, Angular: {angular})")
-        else:
-            print(f"No robot connected. Command ignored: {direction}")
-
-    def create_control_btn(self, icon_text):
-        frame = QFrame()
-        frame.setFixedSize(85, 85)
-        frame.setCursor(Qt.PointingHandCursor)
-        frame.setStyleSheet("""
-            QFrame { background-color: white; border-radius: 20px; border: 1px solid #EEEEEE; }
-            QFrame:hover { background-color: #F4F6F8; }
+    def create_control_btn(self, text):
+        """Helper to create standardized navigation buttons."""
+        btn = QPushButton(text)
+        btn.setFixedSize(85, 85)
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.setStyleSheet("""
+            QPushButton { 
+                background-color: white; 
+                border-radius: 20px; 
+                border: 1px solid #EEEEEE; 
+                font-size: 32px; 
+                color: #1A2B4C; 
+            }
+            QPushButton:pressed { 
+                background-color: #F4F6F8; 
+            }
         """)
-        layout = QVBoxLayout(frame)
-        label = QLabel(icon_text)
-        label.setAlignment(Qt.AlignCenter)
-        label.setStyleSheet("font-size: 32px; font-weight: bold; color: #1A2B4C; border:none;")
-        layout.addWidget(label)
-        return frame
+        return btn
 
     def create_stop_btn(self):
-        frame = QFrame()
-        frame.setFixedSize(80, 80)
-        frame.setCursor(Qt.PointingHandCursor)
-        frame.setStyleSheet("""
-            QFrame { background-color: #EF4444; border-radius: 20px; border: none; }
-            QFrame:hover { background-color: #DC2626; }
+        """Helper to create the emergency stop button."""
+        btn = QPushButton("STOP")
+        btn.setFixedSize(80, 80)
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.setStyleSheet("""
+            QPushButton { 
+                background-color: #EF4444; 
+                border-radius: 20px; 
+                border: none; 
+                color: white; 
+                font-size: 16px; 
+                font-weight: 900; 
+            }
+            QPushButton:pressed { 
+                background-color: #DC2626; 
+            }
         """)
-        layout = QVBoxLayout(frame)
-        label = QLabel("STOP")
-        label.setAlignment(Qt.AlignCenter)
-        label.setStyleSheet("font-size: 16px; font-weight: 900; color: white; border:none;")
-        layout.addWidget(label)
-        return frame
+        return btn
 
     def add_footer(self, parent_layout):
+        """Adds status information at the bottom of the window."""
         footer = QWidget()
         footer.setFixedHeight(80)
         footer.setStyleSheet("background-color: #F8FAFC; border-top: 1px solid #EEEEEE;")
@@ -181,7 +203,6 @@ class ControllerWindow(QWidget):
             self.close()
 
     def closeEvent(self, event):
-        """Ensure the robot interface is properly disconnected on exit."""
         if self.interf:
             self.interf.disconnect()
         event.accept()
