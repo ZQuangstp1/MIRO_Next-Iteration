@@ -25,10 +25,10 @@ class CameraWindow(QWidget):
        
         topic_base_name = "/" + os.getenv("MIRO_ROBOT_NAME", "miro")
         self.sub_cam = rospy.Subscriber(
-            topic_base_name + "/sensors/caml/compressed", 
-            CompressedImage, 
-            self.callback_camera
-        )
+                "/miro/sensors/caml/compressed", 
+                CompressedImage, 
+                self.callback_camera
+            )
 
         # ===== UI =====
         self.initUI()
@@ -39,11 +39,10 @@ class CameraWindow(QWidget):
         self.timer.start(30)
 
     def callback_camera(self, ros_image):
-    
         try:
             self.current_frame = self.bridge.compressed_imgmsg_to_cv2(ros_image, "rgb8")
         except Exception as e:
-            print(f"Error decoding image: {e}")
+            print(f"Error: {e}")
 
     def initUI(self):
         layout = QVBoxLayout()
